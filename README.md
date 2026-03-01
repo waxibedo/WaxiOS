@@ -2,11 +2,11 @@
 
 | Desktop View | WaxiDraw Pro | WaxiMusic |
 | :---: | :---: | :---: |
-| ![screen 2](screen2.png) | ![screen 5](screen5.png) | ![screen 6](screen6.png) |
+| ![screen2](screen2.png) | ![screen5](screen5.png) | ![screen6](screen6.png) |
 
 | File System | Login Screen | Waxi Browser |
 | :---: | :---: | :---: |
-| ![screen 4](screen4.png) | ![screen 1](screen1.png) | ![screen 3](screen3.png) |
+| ![screen4](screen4.png) | ![screen1](screen1.png) | ![screen3](screen3.png) |
 
 # 🌌 WaxiOS v5.4 Platinum - Web Edition
 
