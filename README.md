@@ -1,9 +1,13 @@
-<img width="1919" height="1079" alt="screen6" src="https://github.com/user-attachments/assets/c255c0f2-bd8f-48bd-8855-723134f8c1bb" />
-<img width="1919" height="1079" alt="screen5" src="https://github.com/user-attachments/assets/e6d39b1f-b0c6-4ad3-8d15-8a630456bfcf" />
-<img width="1919" height="1079" alt="screen4" src="https://github.com/user-attachments/assets/d79e73be-f06d-4560-8547-ff2b9272484d" />
-<img width="1919" height="1079" alt="screen3" src="https://github.com/user-attachments/assets/e3cb8973-adef-4b51-ab12-d8813370b370" />
-<img width="1919" height="1079" alt="screen2" src="https://github.com/user-attachments/assets/cbdc4aec-f264-4aa8-ae3e-e661b54eaffd" />
-<img width="1919" height="1079" alt="screen1" src="https://github.com/user-attachments/assets/d2378d33-aff2-4618-a2e1-43d61d4c482a" />
+### 📸 Screenshots (System Gallery)
+
+| Desktop View | WaxiDraw Pro | WaxiMusic |
+| :---: | :---: | :---: |
+| ![Screen 2](screen2.png) | ![Screen 5](screen5.png) | ![Screen 6](screen6.png) |
+
+| File System | Login Screen | Waxi Browser |
+| :---: | :---: | :---: |
+| ![Screen 4](screen4.png) | ![Screen 1](screen1.png) | ![Screen 3](screen3.png) |
+
 # 🌌 WaxiOS v5.4 Platinum - Web Edition
 
 Greetings! I am **WaxiBedo**, the creator and owner of **WaxiOS**. 
