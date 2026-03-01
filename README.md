@@ -2,11 +2,11 @@
 
 | Desktop View | WaxiDraw Pro | WaxiMusic |
 | :---: | :---: | :---: |
-| ![Screen 1](1.png) | ![Screen 2](2.png) | ![Screen 3](3.png) |
+| <img src="https://github.com/user-attachments/assets/a80b04b2-43a7-4229-8de4-eef4d98b28fb" width="300"> | <img src="https://github.com/user-attachments/assets/c4a39aad-0a15-4439-b42f-6d5eb493067a" width="300"> | <img src="https://github.com/user-attachments/assets/2af7118a-2edc-4d1e-97c0-8fd5b928b8bf" width="300"> |
 
 | File System | Login Screen | Waxi Browser |
 | :---: | :---: | :---: |
-| ![Screen 4](4.png) | ![Screen 5](5.png) | ![Screen 6](6.png) |
+| <img src="https://github.com/user-attachments/assets/3b1544c2-c5c7-465d-ae80-32d4540b7d67" width="300"> | <img src="https://github.com/user-attachments/assets/5fb8f62c-4974-4837-a2e8-82223a7d5c94" width="300"> | <img src="https://github.com/user-attachments/assets/959498af-4ab2-46d5-819b-12dd1f3c7f59" width="300"> |
 
 # 🌌 WaxiOS v5.4 Platinum - Web Edition
 
