@@ -1,0 +1,45 @@
+name: Test Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Test basic
+        run: |
+          echo "=== Testing Basic Setup ==="
+          uname -a
+          cat /etc/os-release
+          df -h
+          free -h
+          which debootstrap xorriso mksquashfs || echo "Some tools missing"
+          
+      - name: Install packages
+        run: |
+          echo "Installing packages..."
+          sudo apt-get update -qq
+          sudo apt-get install -y debootstrap squashfs-tools xorriso grub-pc-bin grub-common mtools bc wget curl unzip imagemagick
+          echo "Packages installed"
+          
+      - name: Test debootstrap
+        run: |
+          echo "Testing debootstrap..."
+          mkdir -p test-chroot
+          sudo debootstrap --variant=minbase --arch=amd64 noble test-chroot http://archive.ubuntu.com/ubuntu/
+          echo "Debootstrap successful!"
+          
+      - name: Create test file
+        run: |
+          echo "test-content" > test-output.txt
+          cat test-output.txt
+          
+      - name: Upload test
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output
+          path: test-output.txt
