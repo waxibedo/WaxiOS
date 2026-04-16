@@ -8,107 +8,93 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 45
     
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Create directories
-        run: |
-          mkdir -p scripts
-          ls -la
-
       - name: Debug environment
         run: |
-          echo "=== Environment Info ==="
+          echo "=== System Info ==="
+          uname -a
           cat /etc/os-release
           echo ""
-          echo "=== Available tools ==="
-          which debootstrap xorriso mksquashfs grub-mkrescue 2>/dev/null || echo "Some tools missing"
+          echo "=== Disk Space ==="
+          df -h
+          echo ""
+          echo "=== Memory ==="
+          free -h
 
       - name: Install packages
         run: |
-          echo "Installing packages..."
-          sudo apt-get update -qq
-          sudo apt-get install -y debootstrap squashfs-tools xorriso grub-pc-bin grub-common mtools bc wget curl unzip
-          echo "Packages installed"
+          echo "Installing required packages..."
+          sudo apt-get update -qq || echo "apt-get update failed"
+          sudo apt-get install -y --no-install-recommends \
+            debootstrap \
+            squashfs-tools \
+            xorriso \
+            grub-pc-bin \
+            grub-common \
+            mtools \
+            bc \
+            wget \
+            curl \
+            unzip \
+            imagemagick || { echo "Package install failed"; exit 1; }
+          
+          echo "=== Verifying installed tools ==="
+          which debootstrap xorriso mksquashfs || { echo "Some tools not found"; exit 1; }
 
-      - name: Create build script
+      - name: Create WaxiOS
         run: |
-          cat > scripts/build.sh << 'ENDSCRIPT'
-#!/bin/bash
-set -e
-
-export DEBIAN_FRONTEND=noninteractive
-WORKSPACE="$GITHUB_WORKSPACE"
-cd "$WORKSPACE"
-
-echo "=== WaxiOS Build Started ==="
-echo "Date: $(date)"
-
-echo "[1/6] Installing additional packages..."
-sudo apt-get install -y --no-install-recommends \
-    linux-image-generic \
-    ubuntu-desktop \
-    firefox \
-    plymouth \
-    plymouth-theme-ubuntu-logo \
-    gnome-shell \
-    gdm3 \
-    vlc \
-    imagemagick
-
-echo "[2/6] Creating base system..."
-mkdir -p waxios-build
-cd waxios-build
-sudo debootstrap --variant=minbase --arch=amd64 noble waxios-chroot http://archive.ubuntu.com/ubuntu/
-
-echo "[3/6] Customizing system..."
-sudo mount -t proc proc waxios-chroot/proc
-sudo mount -t sysfs sys waxios-chroot/sys
-sudo mount -o bind /dev waxios-chroot/dev
-
-sudo chroot waxios-chroot /bin/bash << 'CHROOTEOF'
-set -e
-export DEBIAN_FRONTEND=noninteractive
-
-echo "waxios" > /etc/hostname
-cat > /etc/hosts << 'HOSTSEOF'
+          set -e
+          WORKSPACE="$GITHUB_WORKSPACE"
+          cd "$WORKSPACE"
+          
+          echo "[1/5] Creating build directories..."
+          mkdir -p waxios/chroot
+          mkdir -p waxios/iso/casper
+          mkdir -p waxios/iso/boot/grub/i386-pc
+          
+          echo "[2/5] Running debootstrap..."
+          sudo debootstrap --variant=minbase --arch=amd64 noble waxios/chroot http://archive.ubuntu.com/ubuntu/ || { echo "Debootstrap failed"; exit 1; }
+          
+          echo "[3/5] Customizing system..."
+          sudo chroot waxios/chroot /bin/bash -c "
+            echo 'waxios' > /etc/hostname
+            cat > /etc/hosts << 'EOF'
 127.0.0.1 localhost
 127.0.1.1 waxios
-::1 localhost ip6-localhost ip6-loopback
-HOSTSEOF
-
-dpkg-divert --add --rename /usr/sbin/update-grub
-ln -sf /bin/true /usr/sbin/update-grub
-
-apt-get update -qq
-apt-get install -y --no-install-recommends \
-    linux-image-generic \
-    ubuntu-desktop \
-    firefox \
-    plymouth \
-    plymouth-theme-ubuntu-logo \
-    gnome-shell \
-    gdm3 \
-    vlc \
-    language-pack-tr-base
-
-mkdir -p /usr/share/plymouth/themes/waxios
-
-cat > /usr/share/plymouth/themes/waxios/waxios.plymouth << 'PTHEME'
+EOF
+            apt-get update -qq
+            apt-get install -y --no-install-recommends \
+                linux-image-generic \
+                ubuntu-desktop \
+                firefox \
+                plymouth \
+                plymouth-theme-ubuntu-logo \
+                gnome-shell \
+                gdm3 \
+                vlc \
+                language-pack-tr-base || { echo 'Packages failed'; exit 1; }
+          "
+          
+          echo "[4/5] Creating Plymouth theme..."
+          sudo mkdir -p waxios/chroot/usr/share/plymouth/themes/waxios
+          sudo bash -c 'cd waxios/chroot/usr/share/plymouth/themes/waxios
+            convert -size 1920x1080 gradient:"#0f0f23:#1a1a3e" bg.png
+            convert -size 400x80 xc:none -font DejaVu-Sans-Bold -pointsize 36 -fill "#00d4ff" -gravity center -annotate +0+0 "WaxicOS" logo.png
+            cat > waxios.plymouth << '\''PTHEME'\''
 [Plymouth Theme]
 Name=WaxiOS
 Description=WaxiOS Boot Theme
 ModuleName=script
-
 [script]
 ImageDir=/usr/share/plymouth/themes/waxios
 ScriptFile=/usr/share/plymouth/themes/waxios/waxios.script
 PTHEME
-
-cat > /usr/share/plymouth/themes/waxios/waxios.script << 'PSCRIPT'
+            cat > waxios.script << '\''PSCRIPT'\''
 bg = Image("bg.png");
 bg.Scale(Window.GetWidth(), Window.GetHeight());
 bg.Draw(0, 0);
@@ -117,32 +103,15 @@ lx = (Window.GetWidth() - logo.GetWidth()) / 2;
 ly = (Window.GetHeight() - logo.GetHeight()) / 2 - 50;
 logo.Draw(lx, ly);
 PSCRIPT
-
-cd /usr/share/plymouth/themes/waxios
-convert -size 1920x1080 gradient:"#0f0f23:#1a1a3e" bg.png
-convert -size 400x80 xc:none -font DejaVu-Sans-Bold -pointsize 36 -fill "#00d4ff" -gravity center -annotate +0+0 "WaxicOS" logo.png
-
-update-alternatives --install /usr/share/plymouth/themes/default.plymouth default.plymouth /usr/share/plymouth/themes/waxios/waxios.plymouth 100 || true
-CHROOTEOF
-
-sudo umount waxios-chroot/dev
-sudo umount waxios-chroot/sys
-sudo umount waxios-chroot/proc
-
-echo "[4/6] Creating ISO structure..."
-cd "$WORKSPACE"
-mkdir -p waxios-iso/casper
-
-echo "[5/6] Creating filesystem..."
-sudo mksquashfs waxios-build/waxios-chroot waxios-iso/casper/filesystem.squashfs -e dev proc sys
-
-echo "[6/6] Building ISO..."
-cd waxios-iso
-
-sudo cp waxios-build/waxios-chroot/boot/vmlinuz-* casper/vmlinuz 2>/dev/null || true
-sudo cp waxios-build/waxios-chroot/boot/initrd.img-* casper/initrd 2>/dev/null || true
-
-cat > boot/grub/grub.cfg << 'GRUBCFG'
+          '
+          
+          echo "[5/5] Building ISO..."
+          sudo mksquashfs waxios/chroot waxios/iso/casper/filesystem.squashfs -e dev proc sys run
+          sudo cp waxios/chroot/boot/vmlinuz-* waxios/iso/casper/vmlinuz 2>/dev/null || true
+          sudo cp waxios/chroot/boot/initrd.img-* waxios/iso/casper/initrd 2>/dev/null || true
+          
+          sudo bash -c 'cd waxios/iso
+            cat > boot/grub/grub.cfg << '\''GRUB'\''
 set default=0
 set timeout=10
 menuentry "WaxicOS GNU/Linux" {
@@ -153,54 +122,39 @@ menuentry "WaxicOS GNU/Linux (safe mode)" {
     linux /casper/vmlinuz boot=casper nomodeset ---
     initrd /casper/initrd
 }
-GRUBCFG
-
-sudo cp waxios-build/waxios-chroot/usr/share/plymouth/themes/waxios/bg.png . 2>/dev/null || true
-
-echo "Building ISO with xorriso..."
-sudo xorriso -as mkisofs \
-    -iso-level 3 \
-    -full-iso9660-filenames \
-    -V "WaxicOS" \
-    -eltorito-boot boot/grub/i386-pc/boot.img \
-    -no-emul-boot \
-    -boot-load-size 4 \
-    -boot-info-table \
-    --eltorito-catalog boot/grub/boot.cat \
-    --grub2-boot-info \
-    --grub2-mbr /usr/lib/grub/i386-pc/boot_hybrid.img \
-    -output "$WORKSPACE/WaxiOS-1.0.iso" .
-
-echo "=== Build Complete ==="
-ls -lh "$WORKSPACE/WaxiOS-1.0.iso"
-ENDSCRIPT
-          chmod +x scripts/build.sh
-
-      - name: Run build
-        run: |
-          echo "Starting build..."
-          bash scripts/build.sh 2>&1 | tee build.log
-          echo "=== Build log tail ==="
-          tail -50 build.log
-
-      - name: Check output
-        run: |
-          echo "=== Checking output ==="
-          ls -lh WaxiOS*.iso 2>/dev/null || echo "No ISO found"
-          cat build.log | tail -100
+GRUB
+            cp ../chroot/usr/share/plymouth/themes/waxios/bg.png . 2>/dev/null || true
+          '
+          
+          echo "Creating ISO..."
+          cd waxios/iso
+          sudo xorriso -as mkisofs \
+            -iso-level 3 \
+            -full-iso9660-filenames \
+            -V "WaxicOS" \
+            -eltorito-boot boot/grub/i386-pc/boot.img \
+            -no-emul-boot \
+            -boot-load-size 4 \
+            -boot-info-table \
+            --eltorito-catalog boot/grub/boot.cat \
+            --grub2-boot-info \
+            --grub2-mbr /usr/lib/grub/i386-pc/boot_hybrid.img \
+            -output "$WORKSPACE/WaxiOS-1.0.iso" . || { echo "xorriso failed"; exit 1; }
+          
+          echo "=== Build Complete ==="
+          ls -lh "$WORKSPACE/WaxiOS-1.0.iso"
 
       - name: Upload ISO
-        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: WaxiOS-ISO
           path: WaxiOS-1.0.iso
           retention-days: 7
 
-      - name: Upload logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-logs
-          path: build.log
-          retention-days: 7
+      - name: Show ISO size
+        run: |
+          if [ -f WaxiOS-1.0.iso ]; then
+            echo "=== ISO Details ==="
+            ls -lh WaxiOS-1.0.iso
+            echo "Size in MB: $(du -m WaxiOS-1.0.iso | cut -f1)"
+          fi
